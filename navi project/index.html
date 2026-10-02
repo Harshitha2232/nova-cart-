@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NOVA RESCUE – NOVA CART Business Dashboard</title>
+<style>
+:root{--bg:#f5f6fa;--card:#fff;--tx:#1d2433;--mu:#6b7280;--pr:#5b4bdb;--ok:#16a34a;--wa:#d97706;--er:#dc2626;--bd:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#10131c;--card:#1a1f2d;--tx:#e8ebf3;--mu:#98a1b3;--bd:#2a3144}}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--tx);display:flex;min-height:100vh}
+nav{width:200px;background:var(--card);border-right:1px solid var(--bd);padding:16px 10px;position:sticky;top:0;height:100vh}
+nav h1{font-size:16px;margin:0 8px 16px;color:var(--pr)}
+nav button{display:block;width:100%;text-align:left;padding:9px 12px;margin:2px 0;border:0;background:none;color:var(--tx);border-radius:8px;cursor:pointer;font-size:14px}
+nav button.on,nav button:hover{background:var(--pr);color:#fff}
+main{flex:1;padding:22px;max-width:1100px}
+h2{margin:0 0 14px;font-size:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:14px}
+.kpi small{color:var(--mu);display:block}.kpi b{font-size:24px}.kpi span{font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--bd)}th{color:var(--mu);font-weight:600}
+.tag{padding:2px 8px;border-radius:99px;font-size:11px;color:#fff;white-space:nowrap}
+.ok{background:var(--ok)}.wa{background:var(--wa)}.er{background:var(--er)}.mu{background:var(--mu)}
+.bar{height:10px;background:var(--bd);border-radius:6px;overflow:hidden;min-width:80px}.bar i{display:block;height:100%;background:var(--pr)}
+button.a{background:var(--pr);color:#fff;border:0;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px}
+input,select{padding:5px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--tx);width:70px}
+.row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:13px}.row label{width:130px}
+.ins{border-left:4px solid var(--pr);padding:8px 12px;margin:8px 0;background:var(--bg);border-radius:6px;font-size:14px}
+@media(max-width:700px){body{flex-direction:column}nav{width:100%;height:auto;position:static;display:flex;overflow-x:auto}nav h1{display:none}nav button{width:auto;white-space:nowrap}}
+</style>
+</head>
+<body>
+<nav id="nav"><h1>🛒 NOVA RESCUE</h1></nav>
+<main id="main"></main>
+<script>
+// ---------- SAMPLE DATA (replace with real API/DB later) ----------
+const stores=["Koramangala Mart","Indiranagar Fresh","Bandra Basket","Andheri Grocers","Banjara Hub","Madhapur Mart"];
+const city={ "Koramangala Mart":"Bengaluru","Indiranagar Fresh":"Bengaluru","Bandra Basket":"Mumbai","Andheri Grocers":"Mumbai","Banjara Hub":"Hyderabad","Madhapur Mart":"Hyderabad"};
+let inventory=[
+["Milk 1L",0,4],["Bread",3,52],["Eggs (12)",2,30],["Rice 5kg",40,20],["Tomatoes 1kg",5,70],["Onions 1kg",25,8],
+["Curd 400g",0,60],["Atta 5kg",18,6],["Bananas",4,45],["Chips",60,3],["Paneer",2,26],["Cooking Oil",15,10]
+].map((p,i)=>({id:i,name:p[0],store:stores[i%6],stock:p[1],hrs:p[2]}));
+const orders=[
+["Delivered",30,28,""],["Delivered",30,41,""],["Dispatched",30,38,""],["Pending",30,0,""],["Cancelled",30,0,"Item unavailable"],
+["Delivered",30,45,""],["Delivered",30,27,""],["Cancelled",30,0,"Item unavailable"],["Dispatched",30,33,""],["Cancelled",30,0,"Late delivery"],
+["Delivered",30,39,""],["Pending",30,0,""],["Delivered",30,52,""],["Cancelled",30,0,"Changed mind"],["Delivered",30,31,""]
+].map((o,i)=>({id:"#"+(1001+i),status:o[0],est:o[1],act:o[2],reason:o[3],store:stores[i%6]}));
+const customers=[
+["Aarav",3,12,"Active"],["Diya",35,2,"At risk"],["Kabir",62,1,"Churned"],["Meera",8,9,"Active"],["Rohan",41,3,"At risk"],
+["Sana",75,1,"Churned"],["Vikram",5,15,"Active"],["Isha",29,4,"At risk"],["Neel",90,1,"Churned"],["Tara",12,6,"Active"]
+].map(c=>({name:c[0],days:c[1],orders:c[2],seg:c[3]}));
+const tickets=[["Refund",1840],["Delayed delivery",1720],["Product unavailable",1260],["Wrong item",610],["App issue",470]];
+const promos=[
+["FLAT50 (50% off)",600000,9200,12],["FIRST100",450000,6100,18],["FREEDEL",350000,5400,31],["WEEKEND15",300000,4200,38]
+].map(p=>({name:p[0],spend:p[1],redeemed:p[2],repeat:p[3]}));
+const budget=[["Inventory sync tools & store app",600000],["Retention automation (WhatsApp/SMS)",500000],["Delivery partner tools",450000],["Support ticketing & triage",350000],["Analytics & data pipeline",300000],["Training, pilot, contingency",300000]];
+
+// ---------- HELPERS ----------
+const $=s=>document.querySelector(s), inr=n=>"₹"+n.toLocaleString("en-IN"), pct=(a,b)=>b?Math.round(a/b*100):0;
+const cls=x=>x==="ok"?"ok":x==="wa"?"wa":x==="er"?"er":"mu";
+const tag=(t,c)=>`<span class="tag ${cls(c)}">${t}</span>`;
+const kpi=(l,v,s)=>`<div class="card kpi"><small>${l}</small><b>${v}</b><br><span>${s||""}</span></div>`;
+const bar=p=>`<div class="bar"><i style="width:${Math.min(100,p)}%"></i></div>`;
+const table=(h,rows)=>`<table><tr>${h.map(x=>`<th>${x}</th>`).join("")}</tr>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</table>`;
+const stale=h=>h>=24?"er":h>=8?"wa":"ok";
+const accuracy=()=>pct(inventory.filter(p=>p.hrs<8).length,inventory.length);
+const delivered=()=>orders.filter(o=>o.status==="Delivered");
+const avgTime=()=>Math.round(delivered().reduce((s,o)=>s+o.act,0)/delivered().length);
+const cancelRate=()=>pct(orders.filter(o=>o.status==="Cancelled").length,orders.length);
+const groupCount=(a,f)=>a.reduce((m,x)=>(m[f(x)]=(m[f(x)]||0)+1,m),{});
+
+// ---------- VIEWS ----------
+const views={
+Overview(){
+  return `<div class="grid">
+  ${kpi("Repeat purchase rate","27%","was 41%")}${kpi("Avg delivery time",avgTime()+" min","target ≤ 29 · baseline 37")}
+  ${kpi("Cancellation rate",cancelRate()+"%","baseline 11%")}${kpi("Support tickets / mo","5,900","was 3,100")}
+  ${kpi("Inventory accuracy",accuracy()+"%","records updated < 8h")}${kpi("Promo spend","₹17L / mo","cost per retained customer: "+inr(Math.round(1700000/ (promos.reduce((s,p)=>s+p.redeemed*p.repeat/100,0)))))}</div>
+  <div class="card"><b>Connected problem chain</b><p>Stale inventory → unavailable items → cancellations → complaints → fewer repeat orders. Fix inventory and delivery first; they feed everything else.</p></div>
+  <div class="card"><b>Top priority insights</b>${insights().slice(0,3).map(i=>`<div class="ins">${i}</div>`).join("")}</div>`;
+},
+Inventory(){
+  const need=inventory.filter(p=>p.hrs>=24||p.stock===0).length;
+  return `<div class="card">${need} items are out of stock or need verification (not updated in 24h+).</div>
+  <div class="card">${table(["Product","Store","Stock","Last updated","Status","Update stock"],inventory.map(p=>
+   [p.name,p.store,p.stock,p.hrs+"h ago",p.stock===0?tag("Unavailable","er"):p.stock<=5?tag("Low stock","wa"):p.hrs>=24?tag("Verify","wa"):tag("OK","ok"),
+   `<input type="number" min="0" id="s${p.id}" value="${p.stock}"> <button class="a" onclick="setStock(${p.id})">Save</button>`]))}</div>`;
+},
+Delivery(){
+  const reasons=groupCount(orders.filter(o=>o.status==="Cancelled"),o=>o.reason);
+  const by=groupCount(orders,o=>o.status);
+  return `<div class="grid">${Object.entries(by).map(([k,v])=>kpi(k,v)).join("")}${kpi("Avg actual time",avgTime()+" min")}${kpi("Late (>est+5)",delivered().filter(o=>o.act>o.est+5).length+" orders")}</div>
+  <div class="card"><b>Cancellation reasons</b>${Object.entries(reasons).map(([k,v])=>`<div class="row"><label>${k}</label>${bar(pct(v,orders.filter(o=>o.status==="Cancelled").length))}<span>${v}</span></div>`).join("")}</div>
+  <div class="card">${table(["Order","Store","Status","Est","Actual","Flag"],orders.map(o=>
+   [o.id,o.store,o.status,o.est+" min",o.act?o.act+" min":"–",o.act>o.est+5?tag("Delayed","er"):o.status==="Cancelled"?tag(o.reason,"mu"):""]))}</div>`;
+},
+Retention(){
+  const seg=groupCount(customers,c=>c.seg);
+  return `<div class="grid">${kpi("Active",seg.Active||0)}${kpi("At risk",seg["At risk"]||0,"no order 21–60 days")}${kpi("Churned",seg.Churned||0,"no order 60+ days")}</div>
+  <div class="card">${table(["Customer","Days since order","Orders","Segment","Suggested action"],customers.map(c=>
+   [c.name,c.days,c.orders,tag(c.seg,c.seg==="Active"?"ok":c.seg==="At risk"?"wa":"er"),
+   c.seg==="At risk"?"Free delivery on next order":c.seg==="Churned"?"Win-back ₹75 off, once":"Loyalty points nudge"]))}</div>`;
+},
+Support(){
+  const tot=tickets.reduce((s,t)=>s+t[1],0);
+  return `<div class="grid">${kpi("Tickets / month",tot.toLocaleString("en-IN"))}${kpi("Avg resolution","9.2 h","target ≤ 4 h")}</div>
+  <div class="card"><b>Tickets by category</b>${tickets.map(t=>`<div class="row"><label>${t[0]}</label>${bar(pct(t[1],tot))}<span>${t[1]} (${pct(t[1],tot)}%)</span></div>`).join("")}
+  <p style="font-size:13px">Refund + delay + unavailable products account for ${pct(tickets[0][1]+tickets[1][1]+tickets[2][1],tot)}% of tickets — all fixable upstream.</p></div>`;
+},
+Promotions(){
+  return `<div class="card">${table(["Campaign","Spend","Redemptions","Repeat after use","Cost / retained customer","Verdict"],promos.map(p=>{
+   const ret=Math.round(p.redeemed*p.repeat/100), cpr=Math.round(p.spend/ret);
+   return [p.name,inr(p.spend),p.redeemed,p.repeat+"%",inr(cpr),cpr>5000?tag("Cut","er"):cpr>2500?tag("Review","wa"):tag("Scale","ok")];}))}</div>`;
+},
+Insights(){ return `<div class="card"><b>Rule-based recommendations</b>${insights().map(i=>`<div class="ins">${i}</div>`).join("")}</div>`; },
+Budget(){
+  const tot=budget.reduce((s,b)=>s+b[1],0);
+  return `<div class="grid">${kpi("Planned spend",inr(tot),"cap ₹25,00,000 · 6 months")}${kpi("Remaining",inr(2500000-tot))}</div>
+  <div class="card">${table(["Item","Amount","Share"],budget.map(b=>[b[0],inr(b[1]),pct(b[1],tot)+"%"]))}</div>`;
+}};
+
+function insights(){
+  const out=[];
+  const stl=inventory.filter(p=>p.hrs>=24).length, zero=inventory.filter(p=>p.stock===0).length;
+  if(stl)out.push(`<b>Inventory:</b> ${stl} products not updated in 24h+. Push verification alerts to those stores and hide items from the app until confirmed.`);
+  if(zero)out.push(`<b>Availability:</b> ${zero} products show zero stock — block ordering to prevent "item unavailable" cancellations.`);
+  const ia=orders.filter(o=>o.reason==="Item unavailable").length;
+  if(ia)out.push(`<b>Cancellations:</b> ${ia} cancellations were caused by unavailable items — the largest preventable cause.`);
+  const late=delivered().filter(o=>o.act>o.est+5);
+  if(late.length){const w=Object.entries(groupCount(late,o=>o.store)).sort((a,b)=>b[1]-a[1])[0];out.push(`<b>Delivery:</b> ${late.length} late deliveries; ${w[0]} has the most (${w[1]}). Review rider allocation there.`);}
+  const risk=customers.filter(c=>c.seg==="At risk").length;
+  out.push(`<b>Retention:</b> ${risk} at-risk customers — send a low-cost free-delivery offer before they churn.`);
+  const worst=[...promos].sort((a,b)=>a.repeat-b.repeat)[0];
+  out.push(`<b>Promotions:</b> ${worst.name} brings only ${worst.repeat}% repeat purchases. Shift its budget to higher-retention offers like FREEDEL.`);
+  out.push(`<b>Support:</b> ${pct(tickets[0][1]+tickets[1][1]+tickets[2][1],tickets.reduce((s,t)=>s+t[1],0))}% of tickets are refunds, delays, or stock issues — auto-refund on cancellation would cut volume.`);
+  return out;
+}
+function setStock(id){const p=inventory.find(x=>x.id===id);p.stock=+$("#s"+id).value;p.hrs=0;show("Inventory");}
+
+// ---------- ROUTER ----------
+function show(name){
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.textContent===name));
+  $("#main").innerHTML=`<h2>${name}</h2>`+views[name]();
+}
+Object.keys(views).forEach(n=>{const b=document.createElement("button");b.textContent=n;b.onclick=()=>show(n);$("#nav").appendChild(b);});
+show("Overview");
+</script>
+</body>
+</html>
